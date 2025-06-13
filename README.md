@@ -1,88 +1,116 @@
-# Travian游戏助手 (Travian Game Assistant)
+# Travian Game Assistant
 
-## 项目简介 (Project Introduction)
+Travian 游戏助手，提供资源管理、建筑队列、自动升级等功能。
 
-这是一个为Travian游戏开发的油猴脚本（Tampermonkey）辅助工具，旨在提供更好的游戏体验和信息管理。
+## 最新功能更新
 
-This is a Tampermonkey userscript assistant tool for the Travian game, designed to provide a better gaming experience and information management.
+### 2024-03-xx
+1. 建筑队列功能增强
+   - 添加停止队列按钮，可随时暂停队列执行
+   - 优化队列状态显示，包括执行中状态和资源需求
+   - 改进建筑详情页面的队列管理功能
+   - 动态调整资源检查间隔，提高效率
 
-## 功能特性 (Features)
+2. 建筑详情页面改进
+   - 添加队列控制面板，支持开始/停止/清空队列
+   - 显示建筑信息和资源需求对比
+   - 优化资源不足时的等待逻辑
+   - 自动执行升级功能
 
-### 资源管理 (Resource Management)
-- 实时收集和记录资源信息
-- 跟踪资源产量和库存
-- 可配置的数据更新间隔
+3. 资源管理优化
+   - 从游戏脚本直接读取资源数据，提高准确性
+   - 优化资源积累时间计算
+   - 根据等待时间动态调整刷新间隔
 
-### 建筑管理 (Building Management)
-- 资源建筑信息收集
-- 建筑升级详情页面增强
-- 显示建筑升级成本和条件
+## 当前功能
 
-### 游戏信息面板 (Game Information Panels)
-- 可拖动的悬浮面板
-- 显示玩家基本信息
-- 快捷键控制
+1. 资源管理
+   - 显示当前资源库存和产量
+   - 资源建筑信息收集和管理
+   - 资源积累时间计算
+   - 自动等待资源积累
 
-## 安装说明 (Installation)
+2. 建筑队列
+   - 添加/移除建筑到队列
+   - 开始/停止队列执行
+   - 清空队列
+   - 队列状态显示和管理
+   - 自动执行建筑升级
 
-### 前提条件 (Prerequisites)
-- 安装 Tampermonkey 浏览器扩展
-  - Chrome: [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejfjfheaglbedfg)
-  - Firefox: [Tampermonkey](https://addons.mozilla.org/firefox/addon/tampermonkey/)
+3. 界面功能
+   - 可折叠的助手面板
+   - 资源信息实时显示
+   - 建筑队列管理界面
+   - 建筑详情显示
+   - 快捷键支持（Ctrl+Shift+R 切换面板，Ctrl+Shift+Q 关闭面板）
 
-### 安装步骤 (Installation Steps)
-1. 打开 Tampermonkey 控制面板
-2. 点击"实用工具"标签
-3. 选择"从 URL 安装"
-4. 输入 GitHub 脚本的 RAW 地址
-5. 确认安装
+## 开发计划
 
-## 使用说明 (Usage)
+### 近期计划（代码重构）
+1. 代码模块化
+   - 将代码拆分为多个模块文件
+   - 使用 @require 引入外部文件
+   - 优化代码结构和组织
+   - 提高代码可维护性
 
-### 快捷键 (Shortcuts)
-- `Ctrl + Shift + R`: 开启/关闭资源面板
-- `Ctrl + Shift + Q`: 完全关闭助手
+2. 模块划分
+   - `constants.js`: 常量定义（建筑类型、配置等）
+   - `utils.js`: 工具函数（资源计算、时间格式化等）
+   - `managers.js`: 管理器模块（资源、建筑、队列等）
+   - `ui.js`: UI 相关代码（面板、事件处理等）
+   - `main.js`: 主入口文件
 
-### 配置 (Configuration)
-可以在控制台动态调整设置：
+### 功能开发计划
+1. 村庄建筑功能
+   - 村庄建筑信息收集
+   - 建筑升级条件检查
+   - 建筑队列优先级管理
+   - 建筑升级策略优化
 
-```javascript
-// 调整资源数据更新间隔（分钟）
-TravianAssistant.setResourceDataUpdateInterval(15);
+2. 士兵系统
+   - 兵营建筑管理
+   - 士兵训练队列
+   - 训练资源计算
+   - 自动训练功能
 
-// 调整建筑信息更新间隔（秒）
-TravianAssistant.setResourceBuildingUpdateInterval(60);
-```
+3. 其他功能
+   - 市场交易助手
+   - 任务系统集成
+   - 战斗报告分析
+   - 地图资源点管理
 
-## 技术栈 (Tech Stack)
-- JavaScript
-- Tampermonkey
-- DOM 操作
-- 响应式设计
+## 使用说明
 
-## 开发 (Development)
+1. 安装
+   - 安装 Tampermonkey 浏览器扩展
+   - 导入脚本文件
+   - 访问 Travian 游戏页面
 
-### 本地开发 (Local Development)
-1. 克隆仓库
-2. 使用 Tampermonkey 加载 `travian_fuzhu.user.js`
-3. 在 Travian 游戏页面测试
+2. 基本使用
+   - 使用 Ctrl+Shift+R 打开/关闭助手面板
+   - 在资源页面管理建筑队列
+   - 在建筑详情页面查看升级信息
+   - 使用队列控制按钮管理升级任务
 
-### 贡献 (Contributing)
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m '添加了某个特性'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
+3. 注意事项
+   - 确保游戏页面完全加载
+   - 保持网络连接稳定
+   - 定期检查脚本更新
 
-## 许可证 (License)
-基于 MIT 许可证开源。详见 `LICENSE` 文件。
+## 贡献指南
 
-## 免责声明 (Disclaimer)
-本项目仅用于学习和研究目的。使用本脚本可能违反游戏规则，请谨慎使用。
+欢迎提交 Issue 和 Pull Request 来帮助改进脚本。
 
-## 联系方式 (Contact)
-- 项目地址: [GitHub仓库链接]
-- 问题反馈: [创建 Issue]
+1. 提交 Issue
+   - 描述问题或建议
+   - 提供复现步骤
+   - 附上相关截图
 
-## 鸣谢 (Acknowledgments)
-感谢 Travian 游戏和开源社区。 
+2. 提交 Pull Request
+   - 遵循代码风格
+   - 添加必要的注释
+   - 更新相关文档
+
+## 许可证
+
+MIT License 
