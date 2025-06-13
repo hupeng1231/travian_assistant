@@ -1,0 +1,71 @@
+name: Travian Game Assistant CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16.x'
+    
+    - name: Install Dependencies
+      run: |
+        cd travian_chrome_extension
+        npm ci
+    
+    - name: Run ESLint
+      run: |
+        cd travian_chrome_extension
+        npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16.x'
+    
+    - name: Install Dependencies
+      run: |
+        cd travian_chrome_extension
+        npm ci
+    
+    - name: Run Tests
+      run: |
+        cd travian_chrome_extension
+        npm test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16.x'
+    
+    - name: Install Dependencies
+      run: |
+        cd travian_chrome_extension
+        npm ci
+    
+    - name: Build Project
+      run: |
+        cd travian_chrome_extension
+        npm run build
+    
+    - name: Archive Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: travian-assistant-build
+        path: travian_chrome_extension/dist 
