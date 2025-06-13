@@ -1,0 +1,38 @@
+{
+    "manifest_version": 3,
+    "name": "Travian游戏助手",
+    "version": "1.0.0",
+    "description": "Travian游戏辅助工具",
+    "permissions": [
+        "activeTab",
+        "storage",
+        "webRequest",
+        "https://www.kingdoms.com/*"
+    ],
+    "web_accessible_resources": [{
+        "resources": ["panel.html"],
+        "matches": ["https://www.kingdoms.com/*"]
+    }],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "assets/icon16.png",
+            "48": "assets/icon48.png",
+            "128": "assets/icon128.png"
+        }
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://www.kingdoms.com/*"],
+            "js": ["content.js"]
+        }
+    ],
+    "icons": {
+        "16": "assets/icon16.png",
+        "48": "assets/icon48.png", 
+        "128": "assets/icon128.png"
+    }
+} 
