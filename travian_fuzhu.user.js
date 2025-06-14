@@ -308,7 +308,7 @@
         currentQueue: [],
 
         // 最大队列长度
-        MAX_QUEUE_LENGTH: 5,
+        MAX_QUEUE_LENGTH: 20,
 
         // 队列执行状态
         isExecuting: false,
@@ -1963,9 +1963,7 @@
 
                     if (!hasEnoughResources) {
                         TravianAssistant.log(`资源不足，等待资源积累: ${missingResources.join(', ')}`);
-                        // 开始等待资源积累
-                        ResourceCheckManager.startWaiting();
-
+                        
                         // 计算资源积累时间
                         const productionRates = Object.fromEntries(
                             Object.entries(resources).map(([k, v]) => [k, v.每小时产量 || 0])
@@ -1976,25 +1974,12 @@
                             productionRates
                         );
 
-                        // 根据等待时间设置刷新间隔
-                        const waitTimeInHours = accumulationInfo.最大等待时间;
-                        let refreshInterval;
-
-                        if (waitTimeInHours <= 0.1) { // 小于6分钟
-                            refreshInterval = 30 * 1000; // 30秒
-                        } else if (waitTimeInHours <= 0.5) { // 小于30分钟
-                            refreshInterval = 60 * 1000; // 1分钟
-                        } else if (waitTimeInHours <= 2) { // 小于2小时
-                            refreshInterval = 5 * 60 * 1000; // 5分钟
-                        } else if (waitTimeInHours <= 5) { // 小于5小时
-                            refreshInterval = 15 * 60 * 1000; // 15分钟
-                        } else {
-                            refreshInterval = 30 * 60 * 1000; // 30分钟
+                        // 开始等待资源积累，传入预计等待时间
+                        if (!ResourceCheckManager.isWaiting()) {
+                            ResourceCheckManager.startWaiting(accumulationInfo.最大等待时间);
                         }
 
-                        TravianAssistant.log(`设置刷新间隔: ${refreshInterval / 1000}秒`);
-
-                        // 设置定时刷新
+                        // 设置资源检查定时器
                         if (this.resourceCheckInterval) {
                             clearInterval(this.resourceCheckInterval);
                         }
@@ -2020,18 +2005,18 @@
                                     TravianAssistant.log('资源已足够，准备升级');
                                     window.location.reload();
                                 } else if (ResourceCheckManager.isWaitTimeExceeded()) {
-                                    // 等待时间超过最大限制，停止等待
+                                    // 等待时间超过最大限制，停止等待并返回村庄概览
                                     ResourceCheckManager.stopWaiting();
                                     clearInterval(this.resourceCheckInterval);
                                     this.resourceCheckInterval = null;
-                                    TravianAssistant.log('等待资源积累超时，返回村庄概览页面');
+                                    TravianAssistant.log('资源积累超时，返回村庄概览页面');
                                     window.location.href = 'dorf1.php';
                                 } else {
                                     // 更新面板显示
                                     this.updatePanel();
                                 }
                             }
-                        }, refreshInterval);
+                        }, ResourceCheckManager.checkInterval);
 
                         // 立即更新一次面板
                         this.updatePanel();
@@ -2470,17 +2455,23 @@
         isWaitingForResources: false,
         lastCheckTime: 0,
         checkInterval: 5000, // 检查间隔（毫秒）
-        maxWaitTime: 30 * 60 * 1000, // 最大等待时间（30分钟）
+        maxWaitTime: 0, // 动态最大等待时间（毫秒）
+        expectedWaitTime: 0, // 预计等待时间（毫秒）
 
-        startWaiting: function() {
+        startWaiting: function(expectedWaitTimeInHours = 0) {
             this.isWaitingForResources = true;
             this.lastCheckTime = new Date().getTime();
-            TravianAssistant.log('开始等待资源积累');
+            this.expectedWaitTime = expectedWaitTimeInHours * 3600000; // 转换为毫秒
+            // 设置最大等待时间为预计时间的1.5倍，给予足够的缓冲时间
+            this.maxWaitTime = this.expectedWaitTime * 1.5;
+            TravianAssistant.log(`开始等待资源积累，预计等待时间: ${expectedWaitTimeInHours.toFixed(1)}小时，最大等待时间: ${(this.maxWaitTime / 3600000).toFixed(1)}小时`);
         },
 
         stopWaiting: function() {
             this.isWaitingForResources = false;
             this.lastCheckTime = 0;
+            this.maxWaitTime = 0;
+            this.expectedWaitTime = 0;
             TravianAssistant.log('停止等待资源积累');
         },
 
@@ -2489,13 +2480,36 @@
         },
 
         shouldCheckAgain: function() {
+            if (!this.isWaitingForResources) return false;
             const currentTime = new Date().getTime();
-            return currentTime - this.lastCheckTime >= this.checkInterval;
+            const elapsedTime = currentTime - this.lastCheckTime;
+            // 如果已经超过最大等待时间，返回false
+            if (elapsedTime >= this.maxWaitTime) {
+                TravianAssistant.log('资源积累超时，停止检查');
+                return false;
+            }
+            // 根据已等待时间动态调整检查间隔
+            if (elapsedTime < this.expectedWaitTime * 0.5) {
+                // 前半段检查更频繁
+                return currentTime - this.lastCheckTime >= 30000; // 30秒
+            } else {
+                // 后半段检查间隔逐渐增加
+                return currentTime - this.lastCheckTime >= 60000; // 1分钟
+            }
         },
 
         isWaitTimeExceeded: function() {
+            if (!this.isWaitingForResources) return false;
             const currentTime = new Date().getTime();
-            return currentTime - this.lastCheckTime >= this.maxWaitTime;
+            const elapsedTime = currentTime - this.lastCheckTime;
+            return elapsedTime >= this.maxWaitTime;
+        },
+
+        getRemainingTime: function() {
+            if (!this.isWaitingForResources) return 0;
+            const currentTime = new Date().getTime();
+            const elapsedTime = currentTime - this.lastCheckTime;
+            return Math.max(0, this.maxWaitTime - elapsedTime);
         }
     };
 
