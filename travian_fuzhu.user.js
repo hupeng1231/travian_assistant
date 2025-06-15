@@ -19,7 +19,8 @@
 // @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingQueueManager.js
 // @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingDetailManager.js
 // @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/UIManager.js
-// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/utils/GameUtils.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/utils/Utils.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/core/Core.js
 // ==/UserScript==
 
 (function() {
@@ -109,7 +110,8 @@
                 buildingQueue: window.TravianBuildingQueueManager,
                 buildingDetail: window.TravianBuildingDetailManager,
                 ui: window.TravianUIManager,
-                utils: window.TravianUtils
+                utils: window.TravianUtils,
+                core: window.TravianCore
             };
             
             // 检查模块是否已加载
@@ -142,7 +144,8 @@
                         buildingQueue: window.TravianBuildingQueueManager,
                         buildingDetail: window.TravianBuildingDetailManager,
                         ui: window.TravianUIManager,
-                        utils: window.TravianUtils
+                        utils: window.TravianUtils,
+                        core: window.TravianCore
                     };
                     
                     const allLoaded = Object.values(modules).every(module => module);
