@@ -22,8 +22,9 @@ const UIManager = {
                 className: 'resourcePanel',
                 style: {
                     position: 'fixed',
-                    top: '10px',
-                    right: '10px',
+                    top: '50%',
+                    left: '10px',
+                    transform: 'translateY(-50%)',
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     padding: '10px',
                     borderRadius: '5px',
@@ -31,7 +32,9 @@ const UIManager = {
                     zIndex: '9999',
                     fontFamily: 'Arial, sans-serif',
                     fontSize: '12px',
-                    minWidth: '200px'
+                    minWidth: '200px',
+                    maxHeight: '80vh',
+                    overflowY: 'auto'
                 }
             });
 
@@ -40,9 +43,10 @@ const UIManager = {
                     borderBottom: '1px solid #666',
                     paddingBottom: '5px',
                     marginBottom: '5px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    textAlign: 'center'
                 }
-            }, ['资源状态']);
+            }, ['游戏助手']);
 
             const content = window.TravianUtils.createElement('div', {
                 id: 'resourcePanelContent'
@@ -140,46 +144,86 @@ const UIManager = {
             crop: '粮食'
         };
 
-        let html = '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px;">';
+        let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
         
         // 添加资源信息
+        html += '<div style="border-bottom: 1px solid #666; padding-bottom: 5px;">';
+        html += '<div style="font-weight: bold; margin-bottom: 5px;">资源状态</div>';
         resourceTypes.forEach(type => {
             const stock = resources?.[type]?.库存 || 0;
             const production = resources?.[type]?.每小时产量 || 0;
+            const capacity = resources?.[type]?.容量 || 0;
             
             html += `
-                <div style="grid-column: 1; text-align: right;">${resourceNames[type]}:</div>
-                <div style="grid-column: 2;">
-                    <span id="${type}Stock">${stock.toLocaleString()}</span>
-                    (<span id="${type}Production" style="color: ${production >= 0 ? '#90EE90' : '#FFB6C1'}">${production > 0 ? '+' : ''}${production}/小时</span>)
+                <div style="margin: 3px 0;">
+                    <span style="color: #aaa;">${resourceNames[type]}:</span>
+                    <span style="float: right;">
+                        ${stock.toLocaleString()}/${capacity.toLocaleString()}
+                        (<span style="color: ${production >= 0 ? '#90EE90' : '#FFB6C1'}">${production > 0 ? '+' : ''}${production}/h</span>)
+                    </span>
                 </div>
             `;
         });
+        html += '</div>';
 
         // 添加人口信息
         if (resources?.当前人口 !== undefined && resources?.最大人口 !== undefined) {
             html += `
-                <div style="grid-column: 1; text-align: right;">人口:</div>
-                <div style="grid-column: 2;" id="population">${resources.当前人口}/${resources.最大人口}</div>
+                <div style="border-bottom: 1px solid #666; padding-bottom: 5px;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">人口</div>
+                    <div>当前: ${resources.当前人口}/${resources.最大人口}</div>
+                </div>
             `;
         }
 
         // 添加建筑队列状态
-        if (resources?.建筑队列状态 !== undefined) {
+        const buildingQueue = window.TravianCore.modules.buildingQueue;
+        const currentBuilding = buildingQueue?.currentQueue[0];
+        if (currentBuilding) {
             html += `
-                <div style="grid-column: 1; text-align: right;">建筑队列:</div>
-                <div style="grid-column: 2;" id="buildingQueue">${resources.建筑队列状态}</div>
+                <div style="border-bottom: 1px solid #666; padding-bottom: 5px;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">当前建筑</div>
+                    <div>${currentBuilding.建筑名称} → 等级 ${currentBuilding.目标等级}</div>
+                    <div style="margin-top: 5px; font-weight: bold;">所需资源:</div>
             `;
+
+            if (currentBuilding.所需资源) {
+                for (const [type, amount] of Object.entries(currentBuilding.所需资源)) {
+                    const current = resources[type]?.库存 || 0;
+                    const missing = Math.max(0, amount - current);
+                    const production = resources[type]?.每小时产量 || 0;
+                    const waitTime = production > 0 ? missing / production : 0;
+                    const waitTimeText = window.TravianUtils.formatTimeDisplay(waitTime);
+
+                    html += `
+                        <div style="margin: 3px 0;">
+                            <span style="color: #aaa;">${resourceNames[type]}:</span>
+                            <span style="float: right;">
+                                ${current}/${amount}
+                                ${missing > 0 ? ` (缺: ${missing}, 等: ${waitTimeText})` : ''}
+                            </span>
+                        </div>
+                    `;
+                }
+            }
+            html += '</div>';
         }
 
         // 添加资源建筑等级
         if (resources?.资源建筑等级) {
+            html += `
+                <div style="border-bottom: 1px solid #666; padding-bottom: 5px;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">资源建筑</div>
+            `;
             Object.entries(resources.资源建筑等级).forEach(([building, level]) => {
                 html += `
-                    <div style="grid-column: 1; text-align: right;">${building}:</div>
-                    <div style="grid-column: 2;" id="${building}Level">等级 ${level}</div>
+                    <div style="margin: 3px 0;">
+                        <span style="color: #aaa;">${building}:</span>
+                        <span style="float: right;">等级 ${level}</span>
+                    </div>
                 `;
             });
+            html += '</div>';
         }
 
         html += '</div>';
