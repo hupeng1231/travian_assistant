@@ -12,7 +12,6 @@ const BuildingQueueManager = {
         }
 
         this.loadQueueState();
-        this.startQueueExecution();
         this.isInitialized = true;
         window.TravianCore.log('建筑队列管理模块初始化完成');
     },
@@ -88,6 +87,11 @@ const BuildingQueueManager = {
     },
 
     executeNextBuilding: async function() {
+        if (!this.isExecuting) {
+            window.TravianCore.log('建筑队列未在执行状态', 'debug');
+            return;
+        }
+
         if (this.currentQueue.length === 0) {
             window.TravianCore.log('建筑队列为空', 'warn');
             this.stopQueueExecution();
