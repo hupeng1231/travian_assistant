@@ -14,8 +14,31 @@ const ResourceManager = {
         4: '农田'
     },
 
+    // 资源历史记录
+    resourceHistory: {
+        木材: [],
+        粘土: [],
+        铁: [],
+        麦子: []
+    },
+
+    // 产量历史记录
+    productionHistory: {
+        木材: [],
+        粘土: [],
+        铁: [],
+        麦子: []
+    },
+
+    // 上次记录时间戳
+    lastRecordTimestamp: 0,
+
+    // 更新间隔（15分钟）
+    UPDATE_INTERVAL: 15 * 60 * 1000,
+
     init: function() {
         this.startResourceCheck();
+        this.initResourceHistory();
         window.TravianCore.log('资源管理模块初始化完成');
     },
 
@@ -244,6 +267,140 @@ const ResourceManager = {
         // 这里需要根据建筑类型和目标等级获取升级所需资源
         // 暂时返回空对象，后续可以根据游戏数据完善
         return {};
+    },
+
+    // 初始化资源历史记录
+    initResourceHistory: function() {
+        // 从存储中加载历史数据
+        const savedHistory = GM_getValue('resourceHistory');
+        const savedProduction = GM_getValue('productionHistory');
+        const savedTimestamp = GM_getValue('lastRecordTimestamp');
+
+        if (savedHistory) this.resourceHistory = savedHistory;
+        if (savedProduction) this.productionHistory = savedProduction;
+        if (savedTimestamp) this.lastRecordTimestamp = savedTimestamp;
+
+        // 启动定时记录
+        setInterval(() => this.recordResourceData(), this.UPDATE_INTERVAL);
+    },
+
+    // 记录资源数据
+    recordResourceData: function() {
+        const now = Date.now();
+        const resources = this.getCurrentResources();
+        const productionRates = this.getProductionRates();
+
+        // 记录资源数据
+        Object.entries(resources).forEach(([type, info]) => {
+            if (this.resourceHistory[type]) {
+                this.resourceHistory[type].push({
+                    timestamp: now,
+                    amount: info.库存,
+                    capacity: info.容量
+                });
+
+                // 只保留最近24小时的数据
+                const oneDayAgo = now - 24 * 60 * 60 * 1000;
+                this.resourceHistory[type] = this.resourceHistory[type].filter(
+                    record => record.timestamp > oneDayAgo
+                );
+            }
+        });
+
+        // 记录产量数据
+        Object.entries(productionRates).forEach(([type, rate]) => {
+            if (this.productionHistory[type]) {
+                this.productionHistory[type].push({
+                    timestamp: now,
+                    rate: rate
+                });
+
+                // 只保留最近24小时的数据
+                const oneDayAgo = now - 24 * 60 * 60 * 1000;
+                this.productionHistory[type] = this.productionHistory[type].filter(
+                    record => record.timestamp > oneDayAgo
+                );
+            }
+        });
+
+        this.lastRecordTimestamp = now;
+
+        // 保存到存储
+        GM_setValue('resourceHistory', this.resourceHistory);
+        GM_setValue('productionHistory', this.productionHistory);
+        GM_setValue('lastRecordTimestamp', this.lastRecordTimestamp);
+
+        window.TravianCore.log('资源历史数据已更新', 'debug');
+    },
+
+    // 获取资源历史数据
+    getResourceHistory: function(type, hours = 24) {
+        if (!this.resourceHistory[type]) return [];
+        
+        const now = Date.now();
+        const startTime = now - hours * 60 * 60 * 1000;
+        
+        return this.resourceHistory[type].filter(
+            record => record.timestamp >= startTime
+        );
+    },
+
+    // 获取产量历史数据
+    getProductionHistory: function(type, hours = 24) {
+        if (!this.productionHistory[type]) return [];
+        
+        const now = Date.now();
+        const startTime = now - hours * 60 * 60 * 1000;
+        
+        return this.productionHistory[type].filter(
+            record => record.timestamp >= startTime
+        );
+    },
+
+    // 计算资源积累时间
+    calculateResourceAccumulationTime: function(currentResources, requiredResources, productionRates) {
+        const missingResources = {};
+        let maxTime = 0;
+
+        // 计算每种资源所需时间
+        for (const [type, amount] of Object.entries(requiredResources)) {
+            const current = currentResources[type]?.库存 || 0;
+            const production = productionRates[type] || 0;
+
+            if (current < amount) {
+                const missing = amount - current;
+                if (production <= 0) {
+                    return Infinity; // 产量为0，无法积累
+                }
+                const time = missing / production;
+                missingResources[type] = {
+                    missing: missing,
+                    time: time
+                };
+                maxTime = Math.max(maxTime, time);
+            }
+        }
+
+        return {
+            maxTime: maxTime,
+            details: missingResources
+        };
+    },
+
+    // 格式化时间显示
+    formatTimeDisplay: function(hours) {
+        if (hours === Infinity) return '无法积累';
+        
+        const days = Math.floor(hours / 24);
+        const remainingHours = Math.floor(hours % 24);
+        const minutes = Math.floor((hours * 60) % 60);
+        
+        let result = '';
+        if (days > 0) result += `${days}天`;
+        if (remainingHours > 0) result += `${remainingHours}小时`;
+        if (minutes > 0) result += `${minutes}分钟`;
+        
+        return result || '0分钟';
     }
 };
 

@@ -69,6 +69,18 @@ const UIManager = {
                 const nextLevel = this.getNextLevelProduction(type, info.当前等级);
                 const timeToFull = production > 0 ? (info.容量 - info.库存) / production : 0;
                 
+                // 获取资源历史数据
+                const resourceHistory = window.TravianResourceManager.getResourceHistory(type, 24);
+                const productionHistory = window.TravianResourceManager.getProductionHistory(type, 24);
+                
+                // 计算24小时内的资源变化
+                const resourceChange = resourceHistory.length > 1 ? 
+                    resourceHistory[resourceHistory.length - 1].amount - resourceHistory[0].amount : 0;
+                
+                // 计算平均产量
+                const avgProduction = productionHistory.length > 0 ?
+                    productionHistory.reduce((sum, record) => sum + record.rate, 0) / productionHistory.length : 0;
+                
                 resourceEl.innerHTML = `
                     <div class="resource-info">
                         <span class="resource-name">${type}</span>
@@ -80,7 +92,9 @@ const UIManager = {
                     </div>
                     <div class="resource-details">
                         <span>升级后产量: +${nextLevel.toFixed(1)}/小时</span>
-                        <span>预计 ${timeToFull.toFixed(1)} 小时后满仓</span>
+                        <span>预计 ${window.TravianResourceManager.formatTimeDisplay(timeToFull)} 后满仓</span>
+                        <span>24小时变化: ${resourceChange > 0 ? '+' : ''}${resourceChange.toFixed(0)}</span>
+                        <span>平均产量: ${avgProduction.toFixed(1)}/小时</span>
                     </div>
                 `;
             }
