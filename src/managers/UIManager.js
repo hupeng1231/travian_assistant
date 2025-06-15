@@ -80,6 +80,14 @@ const UIManager = {
                 // 计算平均产量
                 const avgProduction = productionHistory.length > 0 ?
                     productionHistory.reduce((sum, record) => sum + record.rate, 0) / productionHistory.length : 0;
+
+                // 获取资源积累建议
+                const requiredResources = this.getRequiredResourcesForNextUpgrade(type, info.当前等级);
+                const accumulationAdvice = window.TravianResourceManager.calculateResourceAccumulationAdvice(
+                    resources,
+                    requiredResources,
+                    productionRates
+                );
                 
                 resourceEl.innerHTML = `
                     <div class="resource-info">
@@ -96,6 +104,44 @@ const UIManager = {
                         <span>24小时变化: ${resourceChange > 0 ? '+' : ''}${resourceChange.toFixed(0)}</span>
                         <span>平均产量: ${avgProduction.toFixed(1)}/小时</span>
                     </div>
+                    ${accumulationAdvice.canAccumulate ? `
+                        <div class="resource-advice">
+                            <div class="advice-header">资源积累分析</div>
+                            <div class="advice-content">
+                                <div class="advice-time">预计积累时间: ${accumulationAdvice.formattedTime}</div>
+                                <div class="advice-efficiency">积累效率: ${accumulationAdvice.efficiency.toFixed(1)}/小时</div>
+                                ${accumulationAdvice.analysis.map(item => `
+                                    <div class="advice-item ${item.status.toLowerCase()}">
+                                        <span class="advice-type">${item.type}</span>
+                                        <span class="advice-status">${item.status}</span>
+                                        <span class="advice-percentage">${item.percentage.toFixed(1)}%</span>
+                                        <span class="advice-text">${item.advice}</span>
+                                    </div>
+                                `).join('')}
+                                ${accumulationAdvice.advice.length > 0 ? `
+                                    <div class="advice-suggestions">
+                                        ${accumulationAdvice.advice.map(text => `
+                                            <div class="advice-suggestion">${text}</div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="resource-advice error">
+                            <div class="advice-header">资源积累分析</div>
+                            <div class="advice-content">
+                                <div class="advice-error">无法积累: ${accumulationAdvice.reason}</div>
+                                ${accumulationAdvice.advice.length > 0 ? `
+                                    <div class="advice-suggestions">
+                                        ${accumulationAdvice.advice.map(text => `
+                                            <div class="advice-suggestion">${text}</div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `}
                 `;
             }
         });
@@ -208,6 +254,18 @@ const UIManager = {
                 });
             }
         }
+    },
+
+    // 获取下一级升级所需资源
+    getRequiredResourcesForNextUpgrade: function(type, currentLevel) {
+        // 这里需要根据建筑类型和当前等级返回升级所需资源
+        // 暂时返回一个示例值，后续可以根据游戏数据完善
+        return {
+            木材: 100 * (currentLevel + 1),
+            粘土: 100 * (currentLevel + 1),
+            铁: 100 * (currentLevel + 1),
+            麦子: 100 * (currentLevel + 1)
+        };
     },
 
     // ... rest of the code ...

@@ -361,30 +361,153 @@ const ResourceManager = {
     calculateResourceAccumulationTime: function(currentResources, requiredResources, productionRates) {
         const missingResources = {};
         let maxTime = 0;
+        let totalMissing = 0;
 
         // 计算每种资源所需时间
         for (const [type, amount] of Object.entries(requiredResources)) {
             const current = currentResources[type]?.库存 || 0;
             const production = productionRates[type] || 0;
+            const capacity = currentResources[type]?.容量 || 0;
 
             if (current < amount) {
                 const missing = amount - current;
+                totalMissing += missing;
+
                 if (production <= 0) {
-                    return Infinity; // 产量为0，无法积累
+                    return {
+                        maxTime: Infinity,
+                        details: {
+                            [type]: {
+                                missing: missing,
+                                time: Infinity,
+                                reason: '产量为0'
+                            }
+                        },
+                        totalMissing: totalMissing,
+                        canAccumulate: false,
+                        reason: `${type}产量为0`
+                    };
                 }
+
+                // 检查是否会超出容量
+                if (current + missing > capacity) {
+                    return {
+                        maxTime: Infinity,
+                        details: {
+                            [type]: {
+                                missing: missing,
+                                time: Infinity,
+                                reason: '超出容量限制'
+                            }
+                        },
+                        totalMissing: totalMissing,
+                        canAccumulate: false,
+                        reason: `${type}超出容量限制`
+                    };
+                }
+
                 const time = missing / production;
                 missingResources[type] = {
                     missing: missing,
-                    time: time
+                    time: time,
+                    production: production,
+                    current: current,
+                    capacity: capacity
                 };
                 maxTime = Math.max(maxTime, time);
             }
         }
 
+        // 计算资源积累效率
+        const efficiency = Object.entries(missingResources).reduce((sum, [type, info]) => {
+            return sum + (info.missing / info.time);
+        }, 0) / Object.keys(missingResources).length;
+
         return {
             maxTime: maxTime,
-            details: missingResources
+            details: missingResources,
+            totalMissing: totalMissing,
+            canAccumulate: true,
+            efficiency: efficiency,
+            formattedTime: this.formatTimeDisplay(maxTime)
         };
+    },
+
+    // 计算资源积累建议
+    calculateResourceAccumulationAdvice: function(currentResources, requiredResources, productionRates) {
+        const result = this.calculateResourceAccumulationTime(currentResources, requiredResources, productionRates);
+        
+        if (!result.canAccumulate) {
+            return {
+                canAccumulate: false,
+                reason: result.reason,
+                advice: this.getResourceAccumulationAdvice(result.details)
+            };
+        }
+
+        // 分析资源积累情况
+        const analysis = Object.entries(result.details).map(([type, info]) => {
+            const percentage = (info.missing / info.capacity) * 100;
+            let status = '正常';
+            let advice = '';
+
+            if (percentage > 80) {
+                status = '严重不足';
+                advice = '建议优先升级仓库';
+            } else if (percentage > 50) {
+                status = '不足';
+                advice = '可以考虑升级仓库';
+            } else if (info.time > 24) {
+                status = '积累缓慢';
+                advice = '建议提高产量';
+            }
+
+            return {
+                type: type,
+                status: status,
+                percentage: percentage,
+                advice: advice,
+                details: info
+            };
+        });
+
+        return {
+            canAccumulate: true,
+            maxTime: result.maxTime,
+            formattedTime: result.formattedTime,
+            efficiency: result.efficiency,
+            analysis: analysis,
+            advice: this.getResourceAccumulationAdvice(result.details)
+        };
+    },
+
+    // 获取资源积累建议
+    getResourceAccumulationAdvice: function(resourceDetails) {
+        const advice = [];
+        const sortedResources = Object.entries(resourceDetails)
+            .sort((a, b) => b[1].time - a[1].time);
+
+        // 分析最慢的资源
+        const slowestResource = sortedResources[0];
+        if (slowestResource) {
+            const [type, info] = slowestResource;
+            if (info.time > 24) {
+                advice.push(`建议优先提高${type}产量`);
+            }
+        }
+
+        // 分析资源比例
+        const totalMissing = Object.values(resourceDetails)
+            .reduce((sum, info) => sum + info.missing, 0);
+        
+        Object.entries(resourceDetails).forEach(([type, info]) => {
+            const percentage = (info.missing / totalMissing) * 100;
+            if (percentage > 40) {
+                advice.push(`${type}需求较大，建议优先积累`);
+            }
+        });
+
+        return advice;
     },
 
     // 格式化时间显示
