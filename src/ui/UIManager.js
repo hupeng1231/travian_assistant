@@ -1,9 +1,8 @@
 // UIManager.js - UI管理模块
 const UIManager = {
     init: function() {
-        if (window.location.pathname.includes('build.php')) {
-            this.createResourcePanel();
-        }
+        // 在所有页面都创建资源面板
+        this.createResourcePanel();
         window.TravianCore.log('UI管理模块初始化完成');
     },
 
