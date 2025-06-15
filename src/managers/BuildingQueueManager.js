@@ -3,10 +3,17 @@ const BuildingQueueManager = {
     currentQueue: [],
     isExecuting: false,
     executionInterval: null,
+    isInitialized: false,
 
     init: function() {
+        if (this.isInitialized) {
+            window.TravianCore.log('建筑队列管理模块已经初始化', 'warn');
+            return;
+        }
+
         this.loadQueueState();
         this.startQueueExecution();
+        this.isInitialized = true;
         window.TravianCore.log('建筑队列管理模块初始化完成');
     },
 

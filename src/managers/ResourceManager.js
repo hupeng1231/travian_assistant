@@ -193,6 +193,57 @@ const ResourceManager = {
     checkResources: function() {
         const currentResources = this.getCurrentResources();
         window.TravianCore.log('当前资源状态:', currentResources, 'debug');
+    },
+
+    // 获取资源建筑信息
+    getResourceBuildings: function() {
+        const resourceBuildings = {
+            伐木场: [],
+            泥坑: [],
+            铁矿: [],
+            农田: []
+        };
+
+        try {
+            // 查找所有资源建筑
+            const buildings = document.querySelectorAll('.resourceField[data-gid]');
+            
+            buildings.forEach(building => {
+                const gid = building.getAttribute('data-gid');
+                const aid = building.getAttribute('data-aid');
+                const levelEl = building.querySelector('.labelLayer');
+                const currentLevel = levelEl ? parseInt(levelEl.textContent || 0) : 0;
+                const buildUrl = building.getAttribute('href');
+                const canUpgrade = !building.classList.contains('notNow');
+
+                const buildingInfo = {
+                    建筑类型: this.RESOURCE_BUILDING_TYPES[gid],
+                    地块ID: aid,
+                    当前等级: currentLevel,
+                    建设链接: buildUrl,
+                    可升级: canUpgrade,
+                    升级所需资源: this.getBuildingUpgradeRequirements(this.RESOURCE_BUILDING_TYPES[gid], currentLevel + 1)
+                };
+
+                // 确保类型存在再添加
+                if (this.RESOURCE_BUILDING_TYPES[gid]) {
+                    resourceBuildings[this.RESOURCE_BUILDING_TYPES[gid]].push(buildingInfo);
+                }
+            });
+
+            window.TravianCore.log('收集到的资源建筑信息:', resourceBuildings, 'debug');
+            return resourceBuildings;
+        } catch (error) {
+            window.TravianCore.log(`获取资源建筑信息时出错: ${error.message}`, 'error');
+            return resourceBuildings;
+        }
+    },
+
+    // 获取建筑升级所需资源
+    getBuildingUpgradeRequirements: function(buildingType, targetLevel) {
+        // 这里需要根据建筑类型和目标等级获取升级所需资源
+        // 暂时返回空对象，后续可以根据游戏数据完善
+        return {};
     }
 };
 
