@@ -87,6 +87,7 @@ const BuildingQueueManager = {
     },
 
     executeNextBuilding: async function() {
+        // 检查队列是否在执行状态
         if (!this.isExecuting) {
             window.TravianCore.log('建筑队列未在执行状态', 'debug');
             return;
@@ -141,20 +142,19 @@ const BuildingQueueManager = {
         try {
             // 如果不在建筑页面，先跳转到建筑页面
             if (!window.location.pathname.includes('build.php')) {
+                // 在跳转前先移除当前建筑，避免重复升级
+                this.removeFromQueueByIndex(0);
                 window.location.href = nextBuilding.建设链接;
                 return;
             }
 
             const upgradeButton = document.querySelector('button.green.build');
             if (upgradeButton) {
+                // 在点击升级按钮前先移除当前建筑，避免重复升级
+                this.removeFromQueueByIndex(0);
                 upgradeButton.click();
                 window.TravianCore.log(`开始升级 ${nextBuilding.建筑类型} 到 ${nextBuilding.目标等级} 级`, 'info');
-                
-                // 等待一段时间后从队列中移除
-                setTimeout(() => {
-                    this.removeFromQueueByIndex(0);
-                    window.TravianUIManager.updateResourcePanel();
-                }, 2000);
+                window.TravianUIManager.updateResourcePanel();
             } else {
                 window.TravianCore.log('未找到升级按钮', 'warn');
             }
