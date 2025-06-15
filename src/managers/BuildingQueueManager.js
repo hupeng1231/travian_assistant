@@ -4,6 +4,7 @@ const BuildingQueueManager = {
     isExecuting: false,
     executionInterval: null,
     isInitialized: false,
+    gameQueueStatus: null, // 游戏内建筑队列状态
 
     init: function() {
         if (this.isInitialized) {
@@ -13,7 +14,146 @@ const BuildingQueueManager = {
 
         this.loadQueueState();
         this.isInitialized = true;
+        // 启动游戏队列检查
+        this.startGameQueueCheck();
         window.TravianCore.log('建筑队列管理模块初始化完成');
+    },
+
+    // 启动游戏队列检查
+    startGameQueueCheck: function() {
+        // 每5秒检查一次游戏内建筑队列
+        setInterval(() => this.checkGameBuildingQueue(), 5000);
+    },
+
+    // 检查游戏内建筑队列
+    checkGameBuildingQueue: function() {
+        try {
+            const queueContainer = document.querySelector('.buildingQueue');
+            if (!queueContainer) {
+                this.gameQueueStatus = null;
+                return;
+            }
+
+            const queueItems = queueContainer.querySelectorAll('.queueItem');
+            const currentQueue = [];
+
+            queueItems.forEach(item => {
+                const buildingName = item.querySelector('.name').textContent.trim();
+                const levelInfo = item.querySelector('.level').textContent.trim();
+                const timeInfo = item.querySelector('.time').textContent.trim();
+                const progressBar = item.querySelector('.progressBar');
+                const progress = progressBar ? parseFloat(progressBar.style.width) : 0;
+
+                // 解析等级信息
+                const levelMatch = levelInfo.match(/等级 (\d+)/);
+                const targetLevel = levelMatch ? parseInt(levelMatch[1]) : 0;
+
+                // 解析时间信息
+                const timeMatch = timeInfo.match(/(\d+):(\d+):(\d+)/);
+                let remainingTime = 0;
+                if (timeMatch) {
+                    const [_, hours, minutes, seconds] = timeMatch;
+                    remainingTime = parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
+                }
+
+                currentQueue.push({
+                    建筑名称: buildingName,
+                    目标等级: targetLevel,
+                    剩余时间: remainingTime,
+                    进度: progress
+                });
+            });
+
+            this.gameQueueStatus = {
+                队列数量: currentQueue.length,
+                当前队列: currentQueue,
+                更新时间: Date.now()
+            };
+
+            // 更新队列状态显示
+            this.updateQueueStatus();
+        } catch (error) {
+            window.TravianCore.log(`检查游戏建筑队列时出错: ${error.message}`, 'error');
+        }
+    },
+
+    // 更新队列状态显示
+    updateQueueStatus: function() {
+        if (!this.gameQueueStatus) return;
+
+        const queueContent = document.querySelector('.queue-content');
+        if (!queueContent) return;
+
+        // 更新游戏内队列状态
+        const gameQueueStatus = document.createElement('div');
+        gameQueueStatus.className = 'game-queue-status';
+        
+        if (this.gameQueueStatus.队列数量 > 0) {
+            const currentBuilding = this.gameQueueStatus.当前队列[0];
+            const remainingTime = this.formatTimeDisplay(currentBuilding.剩余时间);
+            
+            gameQueueStatus.innerHTML = `
+                <div class="game-queue-info">
+                    <span class="queue-building">正在建造: ${currentBuilding.建筑名称} → ${currentBuilding.目标等级}级</span>
+                    <span class="queue-time">剩余时间: ${remainingTime}</span>
+                    <div class="queue-progress">
+                        <div class="progress-bar" style="width: ${currentBuilding.进度}%"></div>
+                    </div>
+                </div>
+            `;
+        } else {
+            gameQueueStatus.innerHTML = '<div class="empty-queue">游戏内无建筑队列</div>';
+        }
+
+        // 更新辅助队列状态
+        const assistantQueueStatus = document.createElement('div');
+        assistantQueueStatus.className = 'assistant-queue-status';
+        
+        if (this.currentQueue.length > 0) {
+            assistantQueueStatus.innerHTML = `
+                <div class="assistant-queue-info">
+                    <span class="queue-title">辅助队列 (${this.currentQueue.length}个)</span>
+                    ${this.currentQueue.map((building, index) => `
+                        <div class="queue-item">
+                            <span class="queue-index">${index + 1}</span>
+                            <span class="queue-building">${building.建筑类型} → ${building.目标等级}级</span>
+                            <button class="remove-btn" data-index="${index}">移除</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // 重新绑定移除按钮事件
+            assistantQueueStatus.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index);
+                    this.removeFromQueueByIndex(index);
+                });
+            });
+        } else {
+            assistantQueueStatus.innerHTML = '<div class="empty-queue">辅助队列为空</div>';
+        }
+
+        // 更新队列内容
+        queueContent.innerHTML = '';
+        queueContent.appendChild(gameQueueStatus);
+        queueContent.appendChild(assistantQueueStatus);
+    },
+
+    // 格式化时间显示
+    formatTimeDisplay: function(seconds) {
+        if (seconds <= 0) return '已完成';
+        
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+        
+        let result = '';
+        if (hours > 0) result += `${hours}小时`;
+        if (minutes > 0) result += `${minutes}分钟`;
+        if (remainingSeconds > 0) result += `${remainingSeconds}秒`;
+        
+        return result || '0秒';
     },
 
     loadQueueState: function() {
