@@ -36,10 +36,74 @@ const ResourceManager = {
     // 更新间隔（15分钟）
     UPDATE_INTERVAL: 15 * 60 * 1000,
 
-    init: function() {
-        this.startResourceCheck();
-        this.initResourceHistory();
-        window.TravianCore.log('资源管理模块初始化完成');
+    // 初始化资源管理器
+    init: async function() {
+        try {
+            // 检查 GM API 是否可用
+            if (typeof GM_getValue === 'undefined') {
+                console.warn('[Travian助手] GM API 不可用，使用内存存储作为回退');
+                this.useMemoryStorage = true;
+                this.memoryStorage = {};
+            } else {
+                this.useMemoryStorage = false;
+            }
+
+            // 初始化资源历史记录
+            this.resourceHistory = {};
+            this.productionHistory = {};
+            
+            // 从存储中加载历史数据
+            await this.loadResourceHistory();
+            
+            // 开始定期更新
+            this.startPeriodicUpdate();
+            
+            console.log('[Travian助手] 资源管理模块初始化完成');
+            return true;
+        } catch (error) {
+            console.error('[Travian助手] 资源管理模块初始化失败:', error);
+            return false;
+        }
+    },
+
+    // 从存储中加载资源历史数据
+    loadResourceHistory: async function() {
+        try {
+            if (this.useMemoryStorage) {
+                // 使用内存存储
+                this.resourceHistory = this.memoryStorage.resourceHistory || {};
+                this.productionHistory = this.memoryStorage.productionHistory || {};
+            } else {
+                // 使用 GM API
+                this.resourceHistory = JSON.parse(GM_getValue('resourceHistory', '{}'));
+                this.productionHistory = JSON.parse(GM_getValue('productionHistory', '{}'));
+            }
+        } catch (error) {
+            console.warn('[Travian助手] 加载资源历史数据失败:', error);
+            this.resourceHistory = {};
+            this.productionHistory = {};
+        }
+    },
+
+    // 保存资源历史数据
+    saveResourceHistory: async function() {
+        try {
+            const data = {
+                resourceHistory: this.resourceHistory,
+                productionHistory: this.productionHistory
+            };
+
+            if (this.useMemoryStorage) {
+                // 使用内存存储
+                this.memoryStorage = { ...this.memoryStorage, ...data };
+            } else {
+                // 使用 GM API
+                GM_setValue('resourceHistory', JSON.stringify(this.resourceHistory));
+                GM_setValue('productionHistory', JSON.stringify(this.productionHistory));
+            }
+        } catch (error) {
+            console.warn('[Travian助手] 保存资源历史数据失败:', error);
+        }
     },
 
     startWaiting: function(expectedWaitTimeInHours = 0) {
