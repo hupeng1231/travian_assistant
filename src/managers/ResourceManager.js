@@ -49,12 +49,19 @@ const ResourceManager = {
     collectResourceInfo: function() {
         const resources = {};
         const resourceTypes = ['wood', 'clay', 'iron', 'crop'];
+        const resourceIndices = {
+            wood: 1,
+            clay: 2,
+            iron: 3,
+            crop: 4
+        };
         
         resourceTypes.forEach(type => {
-            // 获取库存
-            const stockElement = document.querySelector(`#l${type} .value`);
-            // 获取产量
-            const productionElement = document.querySelector(`#production${type} .value`);
+            const index = resourceIndices[type];
+            // 获取库存 - 使用数字索引
+            const stockElement = document.querySelector(`#l${index}.value`);
+            // 获取产量 - 从 production 表格中获取
+            const productionElement = document.querySelector(`#production tr:nth-child(${index}) td:nth-child(2)`);
             
             if (stockElement && productionElement) {
                 const stockText = stockElement.textContent.trim();
