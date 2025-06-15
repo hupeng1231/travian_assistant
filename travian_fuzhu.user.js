@@ -17,13 +17,56 @@
 (function() {
     'use strict';
 
-    // 注册所有模块
-    window.TravianCore.registerModule('resource', window.TravianResourceManager);
-    window.TravianCore.registerModule('buildingQueue', window.TravianBuildingQueueManager);
-    window.TravianCore.registerModule('buildingDetail', window.TravianBuildingDetailManager);
-    window.TravianCore.registerModule('ui', window.TravianUIManager);
-    window.TravianCore.registerModule('utils', window.TravianUtils);
+    // 等待所有模块加载完成
+    function waitForModules() {
+        return new Promise((resolve) => {
+            const checkModules = () => {
+                if (window.TravianCore && 
+                    window.TravianUtils && 
+                    window.TravianResourceManager && 
+                    window.TravianBuildingQueueManager && 
+                    window.TravianBuildingDetailManager && 
+                    window.TravianUIManager) {
+                    resolve();
+                } else {
+                    setTimeout(checkModules, 100);
+                }
+            };
+            checkModules();
+        });
+    }
 
     // 初始化应用
-    window.TravianCore.init();
+    async function initializeApp() {
+        try {
+            // 等待所有模块加载完成
+            await waitForModules();
+
+            // 注册所有模块
+            const modules = {
+                resource: window.TravianResourceManager,
+                buildingQueue: window.TravianBuildingQueueManager,
+                buildingDetail: window.TravianBuildingDetailManager,
+                ui: window.TravianUIManager,
+                utils: window.TravianUtils
+            };
+
+            // 按顺序注册模块
+            for (const [name, module] of Object.entries(modules)) {
+                if (module) {
+                    window.TravianCore.registerModule(name, module);
+                } else {
+                    console.error(`模块 ${name} 未找到`);
+                }
+            }
+
+            // 初始化应用
+            window.TravianCore.init();
+        } catch (error) {
+            console.error('初始化失败:', error);
+        }
+    }
+
+    // 启动应用
+    initializeApp();
 })(); 
