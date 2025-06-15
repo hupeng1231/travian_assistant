@@ -3,15 +3,15 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  Travian游戏助手
-// @author       Your name
+// @author       hupeng1231
 // @match        https://*.travian.com/*
 // @grant        none
-// @require      https://raw.githubusercontent.com/your-username/travian-game-assistant/main/src/core/Core.js
-// @require      https://raw.githubusercontent.com/your-username/travian-game-assistant/main/src/utils/Utils.js
-// @require      https://raw.githubusercontent.com/your-username/travian-game-assistant/main/src/managers/ResourceManager.js
-// @require      https://raw.githubusercontent.com/your-username/travian-game-assistant/main/src/managers/BuildingQueueManager.js
-// @require      https://raw.githubusercontent.com/your-username/travian-game-assistant/main/src/managers/BuildingDetailManager.js
-// @require      https://raw.githubusercontent.com/your-username/travian-game-assistant/main/src/ui/UIManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/core/Core.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/utils/Utils.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/ResourceManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingQueueManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingDetailManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/ui/UIManager.js
 // ==/UserScript==
 
 (function() {
