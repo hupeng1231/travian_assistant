@@ -1,54 +1,65 @@
 // UIManager.js - UI管理模块
 const UIManager = {
     init: function() {
+        window.TravianCore.log('开始初始化 UI 模块...', 'debug');
         // 在所有页面都创建资源面板
         this.createResourcePanel();
         window.TravianCore.log('UI管理模块初始化完成');
     },
 
     createResourcePanel: function() {
+        window.TravianCore.log('开始创建资源面板...', 'debug');
+        
         const existingPanel = document.getElementById('resourcePanel');
         if (existingPanel) {
+            window.TravianCore.log('移除已存在的资源面板', 'debug');
             existingPanel.remove();
         }
 
-        const panel = window.TravianUtils.createElement('div', {
-            id: 'resourcePanel',
-            className: 'resourcePanel',
-            style: {
-                position: 'fixed',
-                top: '10px',
-                right: '10px',
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                padding: '10px',
-                borderRadius: '5px',
-                color: 'white',
-                zIndex: '9999',
-                fontFamily: 'Arial, sans-serif',
-                fontSize: '12px',
-                minWidth: '200px'
-            }
-        });
+        try {
+            const panel = window.TravianUtils.createElement('div', {
+                id: 'resourcePanel',
+                className: 'resourcePanel',
+                style: {
+                    position: 'fixed',
+                    top: '10px',
+                    right: '10px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    color: 'white',
+                    zIndex: '9999',
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: '12px',
+                    minWidth: '200px'
+                }
+            });
 
-        const title = window.TravianUtils.createElement('div', {
-            style: {
-                borderBottom: '1px solid #666',
-                paddingBottom: '5px',
-                marginBottom: '5px',
-                fontWeight: 'bold'
-            }
-        }, ['资源状态']);
+            const title = window.TravianUtils.createElement('div', {
+                style: {
+                    borderBottom: '1px solid #666',
+                    paddingBottom: '5px',
+                    marginBottom: '5px',
+                    fontWeight: 'bold'
+                }
+            }, ['资源状态']);
 
-        const content = window.TravianUtils.createElement('div', {
-            id: 'resourcePanelContent'
-        });
+            const content = window.TravianUtils.createElement('div', {
+                id: 'resourcePanelContent'
+            });
 
-        panel.appendChild(title);
-        panel.appendChild(content);
-        document.body.appendChild(panel);
+            panel.appendChild(title);
+            panel.appendChild(content);
+            document.body.appendChild(panel);
 
-        this.updateResourcePanel();
-        setInterval(() => this.updateResourcePanel(), 5000);
+            window.TravianCore.log('资源面板创建成功', 'debug');
+            window.TravianCore.log('面板元素:', panel, 'debug');
+
+            this.updateResourcePanel();
+            setInterval(() => this.updateResourcePanel(), 5000);
+        } catch (error) {
+            window.TravianCore.log(`创建资源面板时出错: ${error.message}`, 'error');
+        }
     },
 
     updateResourcePanel: function() {
