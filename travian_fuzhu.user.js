@@ -20,7 +20,14 @@
     // 检查模块是否已加载
     function checkModuleLoaded(moduleName) {
         const module = window[`Travian${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}`];
-        console.debug(`检查模块 ${moduleName}:`, module);
+        console.debug(`检查模块 ${moduleName}:`, {
+            name: moduleName,
+            globalName: `Travian${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}`,
+            exists: !!module,
+            type: module ? typeof module : 'undefined',
+            isObject: module && typeof module === 'object',
+            hasInit: module && typeof module.init === 'function'
+        });
         return module && typeof module === 'object';
     }
 
@@ -45,9 +52,18 @@
                     .filter(([name, module]) => module && typeof module === 'object')
                     .map(([name]) => name);
 
+                const missingModules = Object.keys(modules).filter(name => !loadedModules.includes(name));
+
                 console.debug(`模块加载检查 (尝试 ${attempts}/${maxAttempts}):`, {
                     loaded: loadedModules,
-                    missing: Object.keys(modules).filter(name => !loadedModules.includes(name))
+                    missing: missingModules,
+                    details: Object.entries(modules).map(([name, module]) => ({
+                        name,
+                        exists: !!module,
+                        type: module ? typeof module : 'undefined',
+                        isObject: module && typeof module === 'object',
+                        hasInit: module && typeof module.init === 'function'
+                    }))
                 });
 
                 if (loadedModules.length === Object.keys(modules).length) {
@@ -55,6 +71,7 @@
                     resolve();
                 } else if (attempts >= maxAttempts) {
                     console.error('模块加载超时，已加载的模块:', loadedModules);
+                    console.error('未加载的模块:', missingModules);
                     resolve(); // 继续执行，但记录错误
                 } else {
                     setTimeout(checkModules, 100);
@@ -78,6 +95,16 @@
                 throw new Error('核心模块未加载');
             }
 
+            // 检查所有模块的加载状态
+            const moduleNames = ['resource', 'buildingQueue', 'buildingDetail', 'ui', 'utils'];
+            const moduleStatus = moduleNames.map(name => ({
+                name,
+                loaded: checkModuleLoaded(name),
+                module: window[`Travian${name.charAt(0).toUpperCase() + name.slice(1)}`]
+            }));
+
+            console.log('模块加载状态:', moduleStatus);
+
             // 注册所有模块
             const modules = {
                 resource: window.TravianResourceManager,
@@ -92,7 +119,14 @@
             // 按顺序注册模块
             for (const [name, module] of Object.entries(modules)) {
                 if (module) {
-                    console.debug(`注册模块 ${name}:`, module);
+                    console.debug(`注册模块 ${name}:`, {
+                        name,
+                        module,
+                        type: typeof module,
+                        isObject: typeof module === 'object',
+                        hasInit: typeof module.init === 'function',
+                        properties: Object.keys(module)
+                    });
                     const success = window.TravianCore.registerModule(name, module);
                     if (!success) {
                         console.error(`模块 ${name} 注册失败`);
