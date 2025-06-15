@@ -1,41 +1,48 @@
-# 依赖目录
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# 构建输出目录
-dist/
-build/
-out/
-
-# 编辑器和IDE
+# IDE and editor files
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
-# 操作系统文件
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# 日志文件
-*.log
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# 环境变量文件
+# Build output
+dist/
+build/
+*.min.js
+
+# Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
-# 临时文件
+# Logs
+logs/
+*.log
+
+# Temporary files
 *.tmp
-*.bak
+*.temp
+.cache/
 
-# Chrome扩展相关
-*.crx
+# Chrome extension specific
 *.pem
+*.crx
+*.zip
 
 # 项目特定忽略
 travian_chrome_extension/node_modules/
