@@ -51,17 +51,35 @@ const ResourceManager = {
         const resourceTypes = ['wood', 'clay', 'iron', 'crop'];
         
         resourceTypes.forEach(type => {
-            const stockElement = document.getElementById(`l${type}`);
-            const productionElement = document.getElementById(`production${type}`);
+            // 获取库存
+            const stockElement = document.querySelector(`#l${type} .value`);
+            // 获取产量
+            const productionElement = document.querySelector(`#production${type} .value`);
             
             if (stockElement && productionElement) {
+                const stockText = stockElement.textContent.trim();
+                const productionText = productionElement.textContent.trim();
+                
+                window.TravianCore.log(`收集资源信息 - ${type}:`, {
+                    stockElement: stockElement,
+                    productionElement: productionElement,
+                    stockText: stockText,
+                    productionText: productionText
+                }, 'debug');
+
                 resources[type] = {
-                    库存: parseInt(stockElement.textContent.replace(/[^0-9]/g, ''), 10),
-                    每小时产量: parseInt(productionElement.textContent.replace(/[^0-9-]/g, ''), 10)
+                    库存: parseInt(stockText.replace(/[^0-9]/g, ''), 10) || 0,
+                    每小时产量: parseInt(productionText.replace(/[^0-9-]/g, ''), 10) || 0
                 };
+            } else {
+                window.TravianCore.log(`未找到资源元素 - ${type}:`, {
+                    stockElement: stockElement,
+                    productionElement: productionElement
+                }, 'warn');
             }
         });
 
+        window.TravianCore.log('收集到的资源信息:', resources, 'debug');
         return resources;
     },
 
@@ -91,6 +109,7 @@ const ResourceManager = {
 
     checkResources: function() {
         const currentResources = this.getCurrentResources();
+        window.TravianCore.log('当前资源状态:', currentResources, 'debug');
         // 这里可以添加具体的资源检查逻辑
         // 例如检查是否达到某个阈值，或者触发某些事件
     }
