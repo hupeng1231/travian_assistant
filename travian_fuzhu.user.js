@@ -15,6 +15,11 @@
 // @grant        GM_xmlhttpRequest
 // @connect      self
 // @run-at       document-end
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/ResourceManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingQueueManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingDetailManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/UIManager.js
+// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/utils/GameUtils.js
 // ==/UserScript==
 
 (function() {
@@ -97,9 +102,29 @@
         // 初始化所有模块
         initAllModules: async function() {
             this.log('开始初始化模块...');
+            
+            // 注册所有模块
+            const modules = {
+                resource: window.TravianResourceManager,
+                buildingQueue: window.TravianBuildingQueueManager,
+                buildingDetail: window.TravianBuildingDetailManager,
+                ui: window.TravianUIManager,
+                utils: window.TravianUtils
+            };
+            
+            // 检查模块是否已加载
+            for (const [name, module] of Object.entries(modules)) {
+                if (module) {
+                    this.registerModule(name, module);
+                } else {
+                    this.log(`模块 ${name} 未找到`, 'error');
+                }
+            }
+            
             this.log('当前已注册的模块:', 'debug');
             console.debug(Object.keys(this.modules));
             
+            // 初始化所有模块
             for (const name in this.modules) {
                 await this.initModule(name);
             }
@@ -109,23 +134,28 @@
     // 初始化应用
     async function initializeApp() {
         try {
-            // 加载模块
-            const moduleFiles = [
-                'src/managers/ResourceManager.js',
-                'src/managers/BuildingQueueManager.js',
-                'src/managers/BuildingDetailManager.js',
-                'src/managers/UIManager.js',
-                'src/utils/GameUtils.js'
-            ];
-            
-            // 动态加载模块
-            for (const file of moduleFiles) {
-                const script = document.createElement('script');
-                script.src = chrome.runtime.getURL(file);
-                script.type = 'text/javascript';
-                (document.head || document.documentElement).appendChild(script);
-                await new Promise(resolve => script.onload = resolve);
-            }
+            // 等待所有模块加载完成
+            await new Promise(resolve => {
+                const checkModules = () => {
+                    const modules = {
+                        resource: window.TravianResourceManager,
+                        buildingQueue: window.TravianBuildingQueueManager,
+                        buildingDetail: window.TravianBuildingDetailManager,
+                        ui: window.TravianUIManager,
+                        utils: window.TravianUtils
+                    };
+                    
+                    const allLoaded = Object.values(modules).every(module => module);
+                    
+                    if (allLoaded) {
+                        resolve();
+                    } else {
+                        setTimeout(checkModules, 100);
+                    }
+                };
+                
+                checkModules();
+            });
             
             // 初始化所有模块
             await window.TravianCore.initAllModules();
