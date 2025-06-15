@@ -2,6 +2,8 @@
 const Core = {
     version: '0.1',
     debug: true,
+    // 预定义的模块名称列表
+    validModuleNames: ['resource', 'buildingQueue', 'buildingDetail', 'ui', 'utils'],
     modules: {
         resource: null,
         buildingQueue: null,
@@ -35,10 +37,10 @@ const Core = {
         this.log(`尝试注册模块: ${name}`, 'debug');
         this.log(`模块对象:`, module, 'debug');
         
-        // 检查模块名称是否在预定义列表中
-        if (!this.modules.hasOwnProperty(name)) {
+        // 检查模块名称是否有效
+        if (!this.validModuleNames.includes(name)) {
             this.log(`未知模块名称: ${name}`, 'error');
-            this.log('可用的模块名称:', Object.keys(this.modules), 'debug');
+            this.log('可用的模块名称:', this.validModuleNames, 'debug');
             return false;
         }
 
@@ -46,6 +48,11 @@ const Core = {
         if (!module || typeof module !== 'object') {
             this.log(`无效的模块对象: ${name}`, 'error');
             return false;
+        }
+
+        // 检查模块是否已经注册
+        if (this.modules[name] !== null) {
+            this.log(`模块 ${name} 已经注册，将被覆盖`, 'warn');
         }
 
         // 注册模块
