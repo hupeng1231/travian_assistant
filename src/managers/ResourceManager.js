@@ -6,6 +6,14 @@ const ResourceManager = {
     maxWaitTime: 0,
     expectedWaitTime: 0,
 
+    // 资源建筑类型映射
+    RESOURCE_BUILDING_TYPES: {
+        1: '伐木场',
+        2: '泥坑',
+        3: '铁矿',
+        4: '农田'
+    },
+
     init: function() {
         this.startResourceCheck();
         window.TravianCore.log('资源管理模块初始化完成');
@@ -46,6 +54,21 @@ const ResourceManager = {
         return this.collectResourceInfo();
     },
 
+    // 从页面获取资源信息
+    getResourcesFromPageScript: function() {
+        try {
+            // 尝试从页面的全局变量获取资源信息
+            if (typeof window.resources !== 'undefined') {
+                return window.resources;
+            }
+            return null;
+        } catch (error) {
+            window.TravianCore.log('从页面脚本获取资源信息失败:', error, 'warn');
+            return null;
+        }
+    },
+
+    // 收集资源信息
     collectResourceInfo: function() {
         const resources = {};
         const resourceTypes = ['wood', 'clay', 'iron', 'crop'];
@@ -55,12 +78,20 @@ const ResourceManager = {
             iron: 3,
             crop: 4
         };
+
+        // 首先尝试从页面脚本获取
+        const pageResources = this.getResourcesFromPageScript();
+        if (pageResources) {
+            window.TravianCore.log('从页面脚本获取到资源信息:', pageResources, 'debug');
+            return pageResources;
+        }
         
+        // 如果页面脚本获取失败，则从DOM获取
         resourceTypes.forEach(type => {
             const index = resourceIndices[type];
-            // 获取库存 - 使用数字索引
+            // 获取库存
             const stockElement = document.querySelector(`#l${index}.value`);
-            // 获取产量 - 从 production 表格中获取
+            // 获取产量
             const productionElement = document.querySelector(`#production tr:nth-child(${index}) td:nth-child(2)`);
             
             if (stockElement && productionElement) {
@@ -86,8 +117,53 @@ const ResourceManager = {
             }
         });
 
+        // 收集额外的游戏信息
+        const additionalInfo = this.collectAdditionalGameInfo();
+        Object.assign(resources, additionalInfo);
+
         window.TravianCore.log('收集到的资源信息:', resources, 'debug');
         return resources;
+    },
+
+    // 收集额外的游戏信息
+    collectAdditionalGameInfo: function() {
+        const info = {};
+        try {
+            // 获取当前人口
+            const populationElement = document.querySelector('#pop_current');
+            if (populationElement) {
+                info.当前人口 = parseInt(populationElement.textContent.trim(), 10) || 0;
+            }
+
+            // 获取最大人口
+            const maxPopulationElement = document.querySelector('#pop_max');
+            if (maxPopulationElement) {
+                info.最大人口 = parseInt(maxPopulationElement.textContent.trim(), 10) || 0;
+            }
+
+            // 获取当前建筑队列状态
+            const queueElement = document.querySelector('#queue');
+            if (queueElement) {
+                info.建筑队列状态 = queueElement.querySelectorAll('.listEntry').length;
+            }
+
+            // 获取资源建筑等级
+            const resourceBuildings = {};
+            for (let i = 1; i <= 4; i++) {
+                const buildingElement = document.querySelector(`#production tr:nth-child(${i}) td:nth-child(1) a`);
+                if (buildingElement) {
+                    const levelMatch = buildingElement.textContent.match(/等级 (\d+)/);
+                    if (levelMatch) {
+                        resourceBuildings[this.RESOURCE_BUILDING_TYPES[i]] = parseInt(levelMatch[1], 10);
+                    }
+                }
+            }
+            info.资源建筑等级 = resourceBuildings;
+
+        } catch (error) {
+            window.TravianCore.log('收集额外游戏信息时出错:', error, 'warn');
+        }
+        return info;
     },
 
     getProductionRates: function() {
@@ -99,7 +175,7 @@ const ResourceManager = {
 
     calculateAccumulationTime: function(currentResources, requiredResources) {
         const productionRates = this.getProductionRates();
-        return Utils.calculateResourceAccumulationTime(
+        return window.TravianUtils.calculateResourceAccumulationTime(
             currentResources,
             requiredResources,
             productionRates
@@ -117,8 +193,6 @@ const ResourceManager = {
     checkResources: function() {
         const currentResources = this.getCurrentResources();
         window.TravianCore.log('当前资源状态:', currentResources, 'debug');
-        // 这里可以添加具体的资源检查逻辑
-        // 例如检查是否达到某个阈值，或者触发某些事件
     }
 };
 

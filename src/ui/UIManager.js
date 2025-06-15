@@ -63,63 +63,127 @@ const UIManager = {
     },
 
     updateResourcePanel: function() {
-        const content = document.getElementById('resourcePanelContent');
-        if (!content) return;
-
         const resources = window.TravianResourceManager.getCurrentResources();
-        const productionRates = window.TravianResourceManager.getProductionRates();
-        const buildingQueue = window.TravianCore.modules.buildingQueue;
-        const currentBuilding = buildingQueue?.currentQueue[0];
-
-        let html = '';
-        for (const [type, info] of Object.entries(resources)) {
-            const production = productionRates[type] || 0;
-            const productionText = production >= 0 ? `+${production}` : production;
-            html += `
-                <div style="margin: 5px 0;">
-                    <span style="color: #aaa;">${this.getResourceName(type)}:</span>
-                    <span style="float: right;">${info.库存} (${productionText}/h)</span>
-                </div>
-            `;
+        const content = document.getElementById('resourcePanelContent');
+        if (!content) {
+            window.TravianCore.log('未找到资源面板内容元素', 'warn');
+            return;
         }
 
-        if (currentBuilding) {
-            const required = currentBuilding.所需资源;
-            if (required) {
-                html += '<div style="margin-top: 10px; border-top: 1px solid #666; padding-top: 5px;">';
-                html += '<div style="color: #aaa; margin-bottom: 5px;">升级所需资源:</div>';
-                for (const [type, amount] of Object.entries(required)) {
-                    const current = resources[type]?.库存 || 0;
-                    const missing = Math.max(0, amount - current);
-                    const production = productionRates[type] || 0;
-                    const waitTime = production > 0 ? missing / production : 0;
-                    const waitTimeText = window.TravianUtils.formatTimeDisplay(waitTime);
+        const safeUpdateElement = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            } else {
+                window.TravianCore.log(`未找到元素: ${id}`, 'warn');
+            }
+        };
 
-                    html += `
-                        <div style="margin: 3px 0;">
-                            <span style="color: #aaa;">${this.getResourceName(type)}:</span>
-                            <span style="float: right;">
-                                ${current}/${amount}
-                                ${missing > 0 ? ` (缺少: ${missing}, 等待: ${waitTimeText})` : ''}
-                            </span>
-                        </div>
-                    `;
+        // 创建资源面板HTML
+        const html = this.createResourcePanelHTML(resources);
+        content.innerHTML = html;
+
+        // 更新资源信息
+        if (resources) {
+            const resourceTypes = ['wood', 'clay', 'iron', 'crop'];
+            const resourceNames = {
+                wood: '木材',
+                clay: '泥土',
+                iron: '铁矿',
+                crop: '粮食'
+            };
+
+            resourceTypes.forEach(type => {
+                const stock = resources[type]?.库存 || 0;
+                const production = resources[type]?.每小时产量 || 0;
+                const stockElement = document.getElementById(`${type}Stock`);
+                const productionElement = document.getElementById(`${type}Production`);
+
+                if (stockElement) stockElement.textContent = stock.toLocaleString();
+                if (productionElement) productionElement.textContent = `${production > 0 ? '+' : ''}${production}/小时`;
+            });
+
+            // 更新人口信息
+            if (resources.当前人口 !== undefined && resources.最大人口 !== undefined) {
+                const populationElement = document.getElementById('population');
+                if (populationElement) {
+                    populationElement.textContent = `${resources.当前人口}/${resources.最大人口}`;
                 }
-                html += '</div>';
+            }
+
+            // 更新建筑队列状态
+            if (resources.建筑队列状态 !== undefined) {
+                const queueElement = document.getElementById('buildingQueue');
+                if (queueElement) {
+                    queueElement.textContent = resources.建筑队列状态;
+                }
+            }
+
+            // 更新资源建筑等级
+            if (resources.资源建筑等级) {
+                Object.entries(resources.资源建筑等级).forEach(([building, level]) => {
+                    const levelElement = document.getElementById(`${building}Level`);
+                    if (levelElement) {
+                        levelElement.textContent = `等级 ${level}`;
+                    }
+                });
             }
         }
-
-        content.innerHTML = html;
     },
 
-    getResourceName: function(type) {
-        const names = {
+    createResourcePanelHTML: function(resources) {
+        const resourceTypes = ['wood', 'clay', 'iron', 'crop'];
+        const resourceNames = {
             wood: '木材',
-            clay: '粘土',
+            clay: '泥土',
             iron: '铁矿',
             crop: '粮食'
         };
-        return names[type] || type;
+
+        let html = '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px;">';
+        
+        // 添加资源信息
+        resourceTypes.forEach(type => {
+            const stock = resources?.[type]?.库存 || 0;
+            const production = resources?.[type]?.每小时产量 || 0;
+            
+            html += `
+                <div style="grid-column: 1; text-align: right;">${resourceNames[type]}:</div>
+                <div style="grid-column: 2;">
+                    <span id="${type}Stock">${stock.toLocaleString()}</span>
+                    (<span id="${type}Production" style="color: ${production >= 0 ? '#90EE90' : '#FFB6C1'}">${production > 0 ? '+' : ''}${production}/小时</span>)
+                </div>
+            `;
+        });
+
+        // 添加人口信息
+        if (resources?.当前人口 !== undefined && resources?.最大人口 !== undefined) {
+            html += `
+                <div style="grid-column: 1; text-align: right;">人口:</div>
+                <div style="grid-column: 2;" id="population">${resources.当前人口}/${resources.最大人口}</div>
+            `;
+        }
+
+        // 添加建筑队列状态
+        if (resources?.建筑队列状态 !== undefined) {
+            html += `
+                <div style="grid-column: 1; text-align: right;">建筑队列:</div>
+                <div style="grid-column: 2;" id="buildingQueue">${resources.建筑队列状态}</div>
+            `;
+        }
+
+        // 添加资源建筑等级
+        if (resources?.资源建筑等级) {
+            Object.entries(resources.资源建筑等级).forEach(([building, level]) => {
+                html += `
+                    <div style="grid-column: 1; text-align: right;">${building}:</div>
+                    <div style="grid-column: 2;" id="${building}Level">等级 ${level}</div>
+                `;
+            });
+        }
+
+        html += '</div>';
+        return html;
     }
 };
 
