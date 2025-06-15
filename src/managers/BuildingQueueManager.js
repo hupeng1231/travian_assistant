@@ -1,96 +1,89 @@
 // BuildingQueueManager.js - 建筑队列管理模块
 const BuildingQueueManager = {
     currentQueue: [],
-    isWaiting: false,
-    lastCheckTime: 0,
-    maxWaitTime: 0,
-    expectedWaitTime: 0,
+    isExecuting: false,
+    executionInterval: null,
 
     init: function() {
-        this.startQueueCheck();
+        this.loadQueueState();
+        this.startQueueExecution();
         window.TravianCore.log('建筑队列管理模块初始化完成');
     },
 
-    startWaiting: function(expectedWaitTimeInHours = 0) {
-        this.isWaiting = true;
-        this.lastCheckTime = new Date().getTime();
-        this.expectedWaitTime = expectedWaitTimeInHours * 3600000;
-        this.maxWaitTime = this.expectedWaitTime * 1.5;
-        window.TravianCore.log(`开始等待建筑队列，预计等待时间: ${expectedWaitTimeInHours.toFixed(1)}小时`);
-    },
-
-    stopWaiting: function() {
-        this.isWaiting = false;
-        this.lastCheckTime = 0;
-        this.maxWaitTime = 0;
-        this.expectedWaitTime = 0;
-        window.TravianCore.log('停止等待建筑队列');
-    },
-
-    shouldCheckAgain: function() {
-        if (!this.isWaiting) return false;
-        const currentTime = new Date().getTime();
-        const elapsedTime = currentTime - this.lastCheckTime;
-        
-        if (elapsedTime >= this.maxWaitTime) {
-            window.TravianCore.log('建筑队列等待超时，停止检查');
-            return false;
+    loadQueueState: function() {
+        try {
+            const savedQueue = localStorage.getItem('travianBuildingQueue');
+            if (savedQueue) {
+                this.currentQueue = JSON.parse(savedQueue);
+                window.TravianCore.log('已加载保存的建筑队列', 'debug');
+            }
+        } catch (error) {
+            window.TravianCore.log(`加载建筑队列状态时出错: ${error.message}`, 'error');
         }
-
-        return elapsedTime < this.expectedWaitTime * 0.5 ? 
-            currentTime - this.lastCheckTime >= 30000 : 
-            currentTime - this.lastCheckTime >= 60000;
     },
 
-    checkBuildingQueueStatus: function() {
-        const queueElement = document.querySelector('#queue');
-        if (!queueElement) {
-            window.TravianCore.log('未找到建筑队列元素', 'warn');
-            return;
+    saveQueueState: function() {
+        try {
+            localStorage.setItem('travianBuildingQueue', JSON.stringify(this.currentQueue));
+            window.TravianCore.log('已保存建筑队列状态', 'debug');
+        } catch (error) {
+            window.TravianCore.log(`保存建筑队列状态时出错: ${error.message}`, 'error');
         }
+    },
 
-        const queueEntries = queueElement.querySelectorAll('.listEntry');
-        this.currentQueue = Array.from(queueEntries).map(entry => {
-            const buildingName = entry.querySelector('.name').textContent.trim();
-            const levelMatch = buildingName.match(/→ 等级 (\d+)/);
-            const targetLevel = levelMatch ? parseInt(levelMatch[1], 10) : null;
-            const timeLeft = entry.querySelector('.timer').textContent.trim();
-            
-            return {
-                建筑名称: buildingName.split('→')[0].trim(),
-                目标等级: targetLevel,
-                剩余时间: timeLeft,
-                所需资源: this.getBuildingUpgradeRequirements(buildingName, targetLevel)
-            };
-        });
+    addToQueue: function(buildingInfo) {
+        this.currentQueue.push(buildingInfo);
+        this.saveQueueState();
+        window.TravianCore.log(`已将建筑 ${buildingInfo.建筑类型} 添加到队列`, 'info');
+    },
 
-        window.TravianCore.log('当前建筑队列:', this.currentQueue, 'debug');
+    removeFromQueueByIndex: function(index) {
+        if (index >= 0 && index < this.currentQueue.length) {
+            const removed = this.currentQueue.splice(index, 1)[0];
+            this.saveQueueState();
+            window.TravianCore.log(`已从队列中移除建筑 ${removed.建筑类型}`, 'info');
+        }
+    },
+
+    clearQueue: function() {
+        this.currentQueue = [];
+        this.saveQueueState();
+        window.TravianCore.log('已清空建筑队列', 'info');
+    },
+
+    getCurrentQueue: function() {
         return this.currentQueue;
     },
 
-    getBuildingUpgradeRequirements: function(buildingName, targetLevel) {
-        // 这里需要根据建筑名称和目标等级获取升级所需资源
-        // 暂时返回空对象，后续可以根据游戏数据完善
-        return {};
-    },
-
-    updateBuildingQueue: function() {
-        if (window.location.pathname.includes('build.php')) {
-            this.checkBuildingQueueStatus();
+    startQueueExecution: function() {
+        if (this.isExecuting) {
+            window.TravianCore.log('建筑队列已在执行中', 'warn');
+            return;
         }
+
+        this.isExecuting = true;
+        this.executionInterval = setInterval(() => this.executeNextBuilding(), 5000);
+        window.TravianCore.log('开始执行建筑队列', 'info');
     },
 
-    startQueueCheck: function() {
-        setInterval(() => {
-            if (this.shouldCheckAgain()) {
-                this.updateBuildingQueue();
-            }
-        }, 5000);
+    stopQueueExecution: function() {
+        if (!this.isExecuting) {
+            window.TravianCore.log('建筑队列未在执行', 'warn');
+            return;
+        }
+
+        this.isExecuting = false;
+        if (this.executionInterval) {
+            clearInterval(this.executionInterval);
+            this.executionInterval = null;
+        }
+        window.TravianCore.log('停止执行建筑队列', 'info');
     },
 
     executeNextBuilding: async function() {
         if (this.currentQueue.length === 0) {
             window.TravianCore.log('建筑队列为空', 'warn');
+            this.stopQueueExecution();
             return;
         }
 
@@ -130,16 +123,27 @@ const BuildingQueueManager = {
             }
 
             window.TravianCore.log(`资源不足，等待 ${maxWaitTime.toFixed(1)} 小时`, 'info');
-            this.startWaiting(maxWaitTime);
             return;
         }
 
         // 资源足够，执行升级
         try {
+            // 如果不在建筑页面，先跳转到建筑页面
+            if (!window.location.pathname.includes('build.php')) {
+                window.location.href = nextBuilding.建设链接;
+                return;
+            }
+
             const upgradeButton = document.querySelector('button.green.build');
             if (upgradeButton) {
                 upgradeButton.click();
-                window.TravianCore.log(`开始升级 ${nextBuilding.建筑名称} 到 ${nextBuilding.目标等级} 级`, 'info');
+                window.TravianCore.log(`开始升级 ${nextBuilding.建筑类型} 到 ${nextBuilding.目标等级} 级`, 'info');
+                
+                // 等待一段时间后从队列中移除
+                setTimeout(() => {
+                    this.removeFromQueueByIndex(0);
+                    window.TravianUIManager.updateResourcePanel();
+                }, 2000);
             } else {
                 window.TravianCore.log('未找到升级按钮', 'warn');
             }
