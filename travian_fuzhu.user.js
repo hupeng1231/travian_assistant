@@ -1,148 +1,145 @@
 // ==UserScript==
-// @name         Travian Game Assistant
+// @name         Travian 游戏助手
 // @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  Travian游戏助手
-// @author       hupeng1231
+// @version      0.1.0
+// @description  Travian 游戏助手，提供资源管理、建筑队列管理等功能
+// @author       hupeng
 // @match        https://*.travian.com/*
-// @grant        none
-// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/core/Core.js
-// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/utils/Utils.js
-// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/ResourceManager.js
-// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingQueueManager.js
-// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/managers/BuildingDetailManager.js
-// @require      https://raw.githubusercontent.com/hupeng1231/travian_assistant/main/src/ui/UIManager.js
+// @match        https://*.travian.com.*/*
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_deleteValue
+// @grant        GM_listValues
+// @grant        GM_addValueChangeListener
+// @grant        GM_removeValueChangeListener
+// @grant        GM_xmlhttpRequest
+// @connect      self
+// @run-at       document-end
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // 检查模块是否已加载
-    function checkModuleLoaded(moduleName) {
-        const module = window[`Travian${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}`];
-        console.debug(`检查模块 ${moduleName}:`, {
-            name: moduleName,
-            globalName: `Travian${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}`,
-            exists: !!module,
-            type: module ? typeof module : 'undefined',
-            isObject: module && typeof module === 'object',
-            hasInit: module && typeof module.init === 'function'
-        });
-        return module && typeof module === 'object';
-    }
-
-    // 等待所有模块加载完成
-    function waitForModules() {
-        return new Promise((resolve) => {
-            let attempts = 0;
-            const maxAttempts = 50; // 最多等待5秒
-
-            const checkModules = () => {
-                attempts++;
-                const modules = {
-                    Core: window.TravianCore,
-                    Utils: window.TravianUtils,
-                    ResourceManager: window.TravianResourceManager,
-                    BuildingQueueManager: window.TravianBuildingQueueManager,
-                    BuildingDetailManager: window.TravianBuildingDetailManager,
-                    UIManager: window.TravianUIManager
-                };
-
-                const loadedModules = Object.entries(modules)
-                    .filter(([name, module]) => module && typeof module === 'object')
-                    .map(([name]) => name);
-
-                const missingModules = Object.keys(modules).filter(name => !loadedModules.includes(name));
-
-                console.debug(`模块加载检查 (尝试 ${attempts}/${maxAttempts}):`, {
-                    loaded: loadedModules,
-                    missing: missingModules,
-                    details: Object.entries(modules).map(([name, module]) => ({
-                        name,
-                        exists: !!module,
-                        type: module ? typeof module : 'undefined',
-                        isObject: module && typeof module === 'object',
-                        hasInit: module && typeof module.init === 'function'
-                    }))
-                });
-
-                if (loadedModules.length === Object.keys(modules).length) {
-                    console.log('所有模块已加载完成');
-                    resolve();
-                } else if (attempts >= maxAttempts) {
-                    console.error('模块加载超时，已加载的模块:', loadedModules);
-                    console.error('未加载的模块:', missingModules);
-                    resolve(); // 继续执行，但记录错误
-                } else {
-                    setTimeout(checkModules, 100);
+    // 全局命名空间
+    window.TravianCore = {
+        // 版本信息
+        version: '0.1.0',
+        
+        // 日志级别
+        logLevel: 'debug', // 'debug', 'info', 'warn', 'error'
+        
+        // 日志函数
+        log: function(message, level = 'info') {
+            const levels = ['debug', 'info', 'warn', 'error'];
+            const currentLevel = levels.indexOf(this.logLevel);
+            const messageLevel = levels.indexOf(level);
+            
+            if (messageLevel >= currentLevel) {
+                const timestamp = new Date().toLocaleTimeString();
+                const prefix = `[${timestamp}]`;
+                
+                switch (level) {
+                    case 'debug':
+                        console.debug(prefix, message);
+                        break;
+                    case 'info':
+                        console.info(prefix, message);
+                        break;
+                    case 'warn':
+                        console.warn(prefix, message);
+                        break;
+                    case 'error':
+                        console.error(prefix, message);
+                        break;
                 }
-            };
-
-            checkModules();
-        });
-    }
+            }
+        },
+        
+        // 模块管理
+        modules: {},
+        
+        // 注册模块
+        registerModule: function(name, module) {
+            if (this.modules[name]) {
+                this.log(`模块 ${name} 已存在，将被覆盖`, 'warn');
+            }
+            this.modules[name] = module;
+            this.log(`模块 ${name} 已注册`);
+        },
+        
+        // 初始化模块
+        initModule: async function(name) {
+            const module = this.modules[name];
+            if (!module) {
+                this.log(`模块 ${name} 不存在`, 'error');
+                return false;
+            }
+            
+            if (typeof module.init !== 'function') {
+                this.log(`模块 ${name} 没有 init 方法`, 'error');
+                return false;
+            }
+            
+            try {
+                const result = await module.init();
+                if (result) {
+                    this.log(`模块 ${name} 初始化成功`);
+                } else {
+                    this.log(`模块 ${name} 初始化失败`, 'error');
+                }
+                return result;
+            } catch (error) {
+                this.log(`模块 ${name} 初始化出错: ${error}`, 'error');
+                return false;
+            }
+        },
+        
+        // 初始化所有模块
+        initAllModules: async function() {
+            this.log('开始初始化模块...');
+            this.log('当前已注册的模块:', 'debug');
+            console.debug(Object.keys(this.modules));
+            
+            for (const name in this.modules) {
+                await this.initModule(name);
+            }
+        }
+    };
 
     // 初始化应用
     async function initializeApp() {
         try {
-            console.log('开始初始化 Travian 助手...');
-
-            // 等待所有模块加载完成
-            await waitForModules();
-
-            // 检查核心模块
-            if (!window.TravianCore) {
-                throw new Error('核心模块未加载');
+            // 加载模块
+            const moduleFiles = [
+                'src/managers/ResourceManager.js',
+                'src/managers/BuildingQueueManager.js',
+                'src/managers/BuildingDetailManager.js',
+                'src/managers/UIManager.js',
+                'src/utils/GameUtils.js'
+            ];
+            
+            // 动态加载模块
+            for (const file of moduleFiles) {
+                const script = document.createElement('script');
+                script.src = chrome.runtime.getURL(file);
+                script.type = 'text/javascript';
+                (document.head || document.documentElement).appendChild(script);
+                await new Promise(resolve => script.onload = resolve);
             }
-
-            // 检查所有模块的加载状态
-            const moduleNames = ['resource', 'buildingQueue', 'buildingDetail', 'ui', 'utils'];
-            const moduleStatus = moduleNames.map(name => ({
-                name,
-                loaded: checkModuleLoaded(name),
-                module: window[`Travian${name.charAt(0).toUpperCase() + name.slice(1)}`]
-            }));
-
-            console.log('模块加载状态:', moduleStatus);
-
-            // 注册所有模块
-            const modules = {
-                resource: window.TravianResourceManager,
-                buildingQueue: window.TravianBuildingQueueManager,
-                buildingDetail: window.TravianBuildingDetailManager,
-                ui: window.TravianUIManager,
-                utils: window.TravianUtils
-            };
-
-            console.log('准备注册模块:', Object.keys(modules));
-
-            // 按顺序注册模块
-            for (const [name, module] of Object.entries(modules)) {
-                if (module) {
-                    console.debug(`注册模块 ${name}:`, {
-                        name,
-                        module,
-                        type: typeof module,
-                        isObject: typeof module === 'object',
-                        hasInit: typeof module.init === 'function',
-                        properties: Object.keys(module)
-                    });
-                    const success = window.TravianCore.registerModule(name, module);
-                    if (!success) {
-                        console.error(`模块 ${name} 注册失败`);
-                    }
-                } else {
-                    console.error(`模块 ${name} 未找到`);
-                }
-            }
-
-            // 初始化应用
-            window.TravianCore.init();
+            
+            // 初始化所有模块
+            await window.TravianCore.initAllModules();
+            
+            window.TravianCore.log('Travian助手初始化完成');
         } catch (error) {
-            console.error('初始化失败:', error);
+            window.TravianCore.log(`初始化失败: ${error}`, 'error');
         }
     }
 
     // 启动应用
-    initializeApp();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+        initializeApp();
+    }
 })(); 
